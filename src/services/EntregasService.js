@@ -47,6 +47,10 @@ export class EntregasService {
     return entrega;
   }
 
+  historico(id) {
+    return this.buscarPorId(id).historico;
+  }
+
   avancar(id) {
     const entrega = this.buscarPorId(id);
     const proximo = PROXIMO_STATUS[entrega.status];
