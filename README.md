@@ -1,54 +1,121 @@
-# Delivery Tracker — Exercício do Capítulo 4
+# Delivery Tracker API
 
-> **Programação Web II — IFAL/Maceió.** Este é o **projeto do semestre** (avaliado). No Cap. 4 você
-> inicia a **Delivery Tracker API** com **arquitetura em camadas** e, depois, **Repository Pattern +
-> injeção de dependência**. A correção é **automática** (autograder de conformidade) + arquitetura.
+> **Programação Web II — IFAL/Maceió** · Projeto do semestre · Matrícula `2023007365`
 
-## Como usar este repositório
+API para rastrear o ciclo de vida de encomendas, construída com **Node.js + Express** em
+**arquitetura em camadas** (rotas → controllers → services → repositories), com persistência
+simulada em memória.
 
-1. Clique em **"Use this template"** e crie **`pweb2-delivery-<matricula>`** (ex.: `pweb2-delivery-20231012345`).
-   Este é o repositório que você usará o **semestre inteiro** (evolui a cada capítulo).
-2. Clone, instale e rode:
-   ```bash
-   npm install
-   npm start                                        # http://localhost:3000
-   # em outro terminal — autograder:
-   npm run check                                    # = BASE_URL=http://localhost:3000 node autograder/check.mjs
-   ```
-3. A cada `git push`, o **GitHub Actions** roda o autograder e mostra a nota na aba **Actions**
-   (resumo do job). O `autograder/check.mjs` é **aberto** — leia para saber exatamente o que se espera.
+## Como executar
 
-## O que implementar (em `src/`)
+Requer Node.js 18+.
+
+```bash
+npm install
+npm start          # sobe em http://localhost:3000 (ou na porta de process.env.PORT)
+```
+
+Autograder (com o servidor no ar, em outro terminal):
+
+```bash
+npm run check      # = BASE_URL=http://localhost:3000 node autograder/check.mjs
+```
+
+## Arquitetura
 
 ```
+server.js                  # só configura o app, monta /api e o tratamento de erros
 src/
-├── controllers/   # traduz HTTP ↔ service (sem regra de negócio)
-├── services/      # TODA a regra de negócio
-├── repositories/  # só acesso a dados
-├── database/      # persistência SIMULADA em memória (sem banco real, sem ORM)
-├── routes/        # composição das dependências (injeção) + monta em /api
-└── utils/
+├── controllers/           # traduz HTTP ↔ service (sem regra de negócio)
+├── services/              # TODA a regra de negócio (validações, duplicidade, transições)
+├── repositories/          # só acesso a dados
+├── database/              # persistência SIMULADA em memória
+├── routes/                # composition root (injeção de dependências) + rotas
+└── utils/                 # AppError e error handler ({ "erro": "..." })
 ```
 
-- **Regra de negócio só no Service.** Injeção de dependência no **composition root** (`src/routes`).
-- O `server.js` só configura o app (já traz o `GET /api/health` exigido — não remova).
+A composição das dependências acontece em um único ponto, [src/routes/index.js](src/routes/index.js):
 
-## Duas etapas (ver os enunciados completos)
+```js
+const database = new Database();
+const repository = new EntregasRepository(database);
+const service = new EntregasService(repository);
+const controller = new EntregasController(service);
+```
 
-- **Atividade 05 — Entregas em camadas:** CRUD de `/api/entregas`, ciclo de status
-  (`CRIADA → EM_TRANSITO → ENTREGUE`/`CANCELADA`), histórico. Meta: checagens de **Entregas** verdes.
-- **Atividade 06 — Motoristas + Contratos + DI:** `/api/motoristas`, atribuição de motorista,
-  contratos de repository (JSDoc) e composição num ponto único. Meta: **122/122**.
+## Entrega
 
-> O critério de **inversão de dependência** é verificado pelo professor **trocando o repository por
-> um Mock** que respeita o contrato — programe contra o contrato desde o início.
+| Campo         | Tipo            | Observação                                        |
+| ------------- | --------------- | ------------------------------------------------- |
+| `id`          | number          | gerado                                            |
+| `descricao`   | string          | obrigatório                                       |
+| `origem`      | string          | obrigatório; diferente de `destino`               |
+| `destino`     | string          | obrigatório                                       |
+| `status`      | enum            | `CRIADA → EM_TRANSITO → ENTREGUE` ou `CANCELADA`  |
+| `motoristaId` | number \| null  | `null` ao criar                                   |
+| `historico`   | Evento[]        | `{ data: ISO string, descricao: string }`         |
 
-## Contrato (resumo)
+## Rotas
 
-- Base `/api` · JSON · erro `{ "erro": "..." }` · `GET /api/health` → `{ "status": "ok" }`.
-- Status: `201` criar · `400` entrada inválida · `404` não encontrado · `409` unicidade
-  (duplicata/CPF) · `422` regra de estado (transição/atribuição inválida).
-- Execução: `npm start`, respeita `process.env.PORT`, branch `main`.
+| Método | Rota                             | Sucesso | Erros                         |
+| ------ | -------------------------------- | ------- | ----------------------------- |
+| GET    | `/api/health`                    | 200     | —                             |
+| POST   | `/api/entregas`                  | 201     | 400 inválido · 409 duplicata  |
+| GET    | `/api/entregas`                  | 200     | —                             |
+| GET    | `/api/entregas?status=CRIADA`    | 200     | —                             |
+| GET    | `/api/entregas/:id`              | 200     | 404                           |
+| PATCH  | `/api/entregas/:id/avancar`      | 200     | 404 · 422 transição inválida  |
+| PATCH  | `/api/entregas/:id/cancelar`     | 200     | 404 · 422 já finalizada       |
+| GET    | `/api/entregas/:id/historico`    | 200     | 404                           |
 
-Faça **um commit por avanço** (Conventional Commits, ex.: `feat(entregas): valida origem ≠ destino`).
-Bom trabalho! 🚀
+Erros sempre no formato `{ "erro": "mensagem" }`.
+
+### Regras de negócio
+
+- **Criação:** `origem` ≠ `destino` (senão `400`); status inicial `CRIADA`; registra evento no histórico.
+- **Duplicidade:** não pode existir entrega ativa (não `ENTREGUE`/`CANCELADA`) com mesma
+  `descricao` + `origem` + `destino` → `409`.
+- **Transições:** apenas `CRIADA → EM_TRANSITO → ENTREGUE`; qualquer outro avanço → `422`.
+- **Cancelamento:** só se o status não for `ENTREGUE` nem `CANCELADA` (senão `422`).
+
+## Exemplos (curl)
+
+```bash
+# health check
+curl http://localhost:3000/api/health
+
+# criar entrega
+curl -X POST http://localhost:3000/api/entregas \
+  -H "Content-Type: application/json" \
+  -d '{"descricao":"Caixa de livros","origem":"Maceió","destino":"Arapiraca"}'
+
+# listar todas / filtrar por status
+curl http://localhost:3000/api/entregas
+curl "http://localhost:3000/api/entregas?status=EM_TRANSITO"
+
+# buscar por id
+curl http://localhost:3000/api/entregas/1
+
+# avançar status (CRIADA → EM_TRANSITO → ENTREGUE)
+curl -X PATCH http://localhost:3000/api/entregas/1/avancar
+
+# cancelar
+curl -X PATCH http://localhost:3000/api/entregas/1/cancelar
+
+# histórico
+curl http://localhost:3000/api/entregas/1/historico
+```
+
+Exemplo de resposta ao criar (`201`):
+
+```json
+{
+  "id": 1,
+  "descricao": "Caixa de livros",
+  "origem": "Maceió",
+  "destino": "Arapiraca",
+  "status": "CRIADA",
+  "motoristaId": null,
+  "historico": [{ "data": "2026-09-23T12:00:00.000Z", "descricao": "Entrega criada" }]
+}
+```
