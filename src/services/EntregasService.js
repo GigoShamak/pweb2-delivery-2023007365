@@ -56,6 +56,14 @@ export class EntregasService {
     return this.#mudarStatus(entrega, proximo);
   }
 
+  cancelar(id) {
+    const entrega = this.buscarPorId(id);
+    if (STATUS_FINAIS.includes(entrega.status)) {
+      throw new AppError(422, `Não é possível cancelar uma entrega com status ${entrega.status}`);
+    }
+    return this.#mudarStatus(entrega, 'CANCELADA');
+  }
+
   #mudarStatus(entrega, status) {
     return this.repository.atualizar(entrega.id, {
       status,

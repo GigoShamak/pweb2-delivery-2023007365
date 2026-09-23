@@ -19,4 +19,8 @@ export class EntregasController {
   avancar = (req, res) => {
     res.status(200).json(this.service.avancar(req.params.id));
   };
+
+  cancelar = (req, res) => {
+    res.status(200).json(this.service.cancelar(req.params.id));
+  };
 }

@@ -17,6 +17,7 @@ export function criarRotas() {
   router.get('/entregas', controller.listar);
   router.get('/entregas/:id', controller.buscarPorId);
   router.patch('/entregas/:id/avancar', controller.avancar);
+  router.patch('/entregas/:id/cancelar', controller.cancelar);
 
   return router;
 }
