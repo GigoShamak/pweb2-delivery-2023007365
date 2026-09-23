@@ -35,7 +35,8 @@ export class EntregasService {
     return { data: new Date().toISOString(), descricao };
   }
 
-  listar() {
+  listar({ status } = {}) {
+    if (status) return this.repository.buscarPor({ status });
     return this.repository.listar();
   }
 

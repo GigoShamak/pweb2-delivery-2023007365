@@ -9,7 +9,7 @@ export class EntregasController {
   };
 
   listar = (req, res) => {
-    res.status(200).json(this.service.listar());
+    res.status(200).json(this.service.listar(req.query));
   };
 
   buscarPorId = (req, res) => {
