@@ -1,5 +1,7 @@
 import { AppError } from '../utils/AppError.js';
 
+const STATUS_FINAIS = ['ENTREGUE', 'CANCELADA'];
+
 export class EntregasService {
   constructor(repository) {
     this.repository = repository;
@@ -14,10 +16,15 @@ export class EntregasService {
     if (origem.trim().toLowerCase() === destino.trim().toLowerCase()) {
       throw new AppError(400, 'Origem e destino devem ser diferentes');
     }
+    const dados = { descricao: descricao.trim(), origem: origem.trim(), destino: destino.trim() };
+    const duplicadaAtiva = this.repository
+      .buscarPor(dados)
+      .some((e) => !STATUS_FINAIS.includes(e.status));
+    if (duplicadaAtiva) {
+      throw new AppError(409, 'Já existe uma entrega ativa com mesma descrição, origem e destino');
+    }
     return this.repository.criar({
-      descricao: descricao.trim(),
-      origem: origem.trim(),
-      destino: destino.trim(),
+      ...dados,
       status: 'CRIADA',
       motoristaId: null,
       historico: [this.#evento('Entrega criada')],

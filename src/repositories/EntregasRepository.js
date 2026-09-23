@@ -14,6 +14,13 @@ export class EntregasRepository {
     return structuredClone(this.database.entregas);
   }
 
+  buscarPor(criterios) {
+    const campos = Object.entries(criterios);
+    return structuredClone(
+      this.database.entregas.filter((e) => campos.every(([campo, valor]) => e[campo] === valor)),
+    );
+  }
+
   buscarPorId(id) {
     const entrega = this.database.entregas.find((e) => e.id === id);
     return entrega ? structuredClone(entrega) : null;
