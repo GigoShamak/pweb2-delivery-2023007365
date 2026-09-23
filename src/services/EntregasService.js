@@ -11,6 +11,9 @@ export class EntregasService {
         throw new AppError(400, `Campo obrigatório ausente ou inválido: ${campo}`);
       }
     }
+    if (origem.trim().toLowerCase() === destino.trim().toLowerCase()) {
+      throw new AppError(400, 'Origem e destino devem ser diferentes');
+    }
     return this.repository.criar({
       descricao: descricao.trim(),
       origem: origem.trim(),
