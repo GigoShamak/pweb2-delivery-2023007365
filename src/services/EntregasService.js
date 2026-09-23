@@ -19,7 +19,13 @@ export class EntregasService {
       origem: origem.trim(),
       destino: destino.trim(),
       status: 'CRIADA',
+      motoristaId: null,
+      historico: [this.#evento('Entrega criada')],
     });
+  }
+
+  #evento(descricao) {
+    return { data: new Date().toISOString(), descricao };
   }
 
   listar() {
