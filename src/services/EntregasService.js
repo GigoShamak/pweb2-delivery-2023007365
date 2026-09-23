@@ -1,6 +1,7 @@
 import { AppError } from '../utils/AppError.js';
 
 const STATUS_FINAIS = ['ENTREGUE', 'CANCELADA'];
+const PROXIMO_STATUS = { CRIADA: 'EM_TRANSITO', EM_TRANSITO: 'ENTREGUE' };
 
 export class EntregasService {
   constructor(repository) {
@@ -44,5 +45,24 @@ export class EntregasService {
     const entrega = this.repository.buscarPorId(Number(id));
     if (!entrega) throw new AppError(404, 'Entrega não encontrada');
     return entrega;
+  }
+
+  avancar(id) {
+    const entrega = this.buscarPorId(id);
+    const proximo = PROXIMO_STATUS[entrega.status];
+    if (!proximo) {
+      throw new AppError(422, `Não é possível avançar uma entrega com status ${entrega.status}`);
+    }
+    return this.#mudarStatus(entrega, proximo);
+  }
+
+  #mudarStatus(entrega, status) {
+    return this.repository.atualizar(entrega.id, {
+      status,
+      historico: [
+        ...entrega.historico,
+        this.#evento(`Status alterado de ${entrega.status} para ${status}`),
+      ],
+    });
   }
 }

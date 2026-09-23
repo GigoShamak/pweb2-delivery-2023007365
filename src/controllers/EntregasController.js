@@ -15,4 +15,8 @@ export class EntregasController {
   buscarPorId = (req, res) => {
     res.status(200).json(this.service.buscarPorId(req.params.id));
   };
+
+  avancar = (req, res) => {
+    res.status(200).json(this.service.avancar(req.params.id));
+  };
 }
