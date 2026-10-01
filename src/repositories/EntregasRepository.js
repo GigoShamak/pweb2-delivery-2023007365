@@ -1,4 +1,5 @@
 // Somente acesso a dados. Sem regra de negócio.
+/** @implements {import('./IEntregasRepository.js').IEntregasRepository} */
 export class EntregasRepository {
   constructor(database) {
     this.database = database;

@@ -4,6 +4,7 @@ const STATUS_FINAIS = ['ENTREGUE', 'CANCELADA'];
 const PROXIMO_STATUS = { CRIADA: 'EM_TRANSITO', EM_TRANSITO: 'ENTREGUE' };
 
 export class EntregasService {
+  /** @param {import('../repositories/IEntregasRepository.js').IEntregasRepository} repository */
   constructor(repository) {
     this.repository = repository;
   }
