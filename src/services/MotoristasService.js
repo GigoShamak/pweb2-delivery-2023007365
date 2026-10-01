@@ -1,9 +1,13 @@
 import { AppError } from '../utils/AppError.js';
 
 export class MotoristasService {
-  /** @param {import('../repositories/IMotoristasRepository.js').IMotoristasRepository} motoristasRepository */
-  constructor(motoristasRepository) {
+  /**
+   * @param {import('../repositories/IMotoristasRepository.js').IMotoristasRepository} motoristasRepository
+   * @param {import('../repositories/IEntregasRepository.js').IEntregasRepository} entregasRepository
+   */
+  constructor(motoristasRepository, entregasRepository) {
     this.motoristasRepository = motoristasRepository;
+    this.entregasRepository = entregasRepository;
   }
 
   criar({ nome, cpf, placaVeiculo } = {}) {
@@ -34,5 +38,12 @@ export class MotoristasService {
     const motorista = this.motoristasRepository.buscarPorId(Number(id));
     if (!motorista) throw new AppError(404, 'Motorista não encontrado');
     return motorista;
+  }
+
+  listarEntregas(id, { status } = {}) {
+    const motorista = this.buscarPorId(id);
+    const filtros = { motoristaId: motorista.id };
+    if (status) filtros.status = status;
+    return this.entregasRepository.listarTodos(filtros);
   }
 }

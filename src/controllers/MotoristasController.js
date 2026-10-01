@@ -15,4 +15,8 @@ export class MotoristasController {
   buscarPorId = (req, res) => {
     res.status(200).json(this.service.buscarPorId(req.params.id));
   };
+
+  listarEntregas = (req, res) => {
+    res.status(200).json(this.service.listarEntregas(req.params.id, req.query));
+  };
 }

@@ -13,7 +13,7 @@ export function criarRotas() {
   const entregasRepo = new EntregasRepository(database);
   const motoristasRepo = new MotoristasRepository(database);
   const entregasService = new EntregasService(entregasRepo);
-  const motoristasService = new MotoristasService(motoristasRepo);
+  const motoristasService = new MotoristasService(motoristasRepo, entregasRepo);
   const entregasController = new EntregasController(entregasService);
   const motoristasController = new MotoristasController(motoristasService);
 
@@ -29,6 +29,7 @@ export function criarRotas() {
   router.post('/motoristas', motoristasController.criar);
   router.get('/motoristas', motoristasController.listar);
   router.get('/motoristas/:id', motoristasController.buscarPorId);
+  router.get('/motoristas/:id/entregas', motoristasController.listarEntregas);
 
   return router;
 }
