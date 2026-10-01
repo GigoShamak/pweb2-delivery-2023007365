@@ -27,4 +27,8 @@ export class EntregasController {
   cancelar = (req, res) => {
     res.status(200).json(this.service.cancelar(req.params.id));
   };
+
+  atribuir = (req, res) => {
+    res.status(200).json(this.service.atribuir(req.params.id, req.body));
+  };
 }

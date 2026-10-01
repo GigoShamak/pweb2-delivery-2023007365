@@ -4,9 +4,13 @@ const STATUS_FINAIS = ['ENTREGUE', 'CANCELADA'];
 const PROXIMO_STATUS = { CRIADA: 'EM_TRANSITO', EM_TRANSITO: 'ENTREGUE' };
 
 export class EntregasService {
-  /** @param {import('../repositories/IEntregasRepository.js').IEntregasRepository} repository */
-  constructor(repository) {
-    this.repository = repository;
+  /**
+   * @param {import('../repositories/IEntregasRepository.js').IEntregasRepository} entregasRepository
+   * @param {import('../repositories/IMotoristasRepository.js').IMotoristasRepository} motoristasRepository
+   */
+  constructor(entregasRepository, motoristasRepository) {
+    this.entregasRepository = entregasRepository;
+    this.motoristasRepository = motoristasRepository;
   }
 
   criar({ descricao, origem, destino } = {}) {
@@ -19,7 +23,7 @@ export class EntregasService {
       throw new AppError(400, 'Origem e destino devem ser diferentes');
     }
     const dados = { descricao: descricao.trim(), origem: origem.trim(), destino: destino.trim() };
-    const duplicadaAtiva = this.repository
+    const duplicadaAtiva = this.entregasRepository
       .listarTodos()
       .some(
         (e) =>
@@ -31,7 +35,7 @@ export class EntregasService {
     if (duplicadaAtiva) {
       throw new AppError(409, 'Já existe uma entrega ativa com mesma descrição, origem e destino');
     }
-    return this.repository.criar({
+    return this.entregasRepository.criar({
       ...dados,
       status: 'CRIADA',
       motoristaId: null,
@@ -44,11 +48,11 @@ export class EntregasService {
   }
 
   listar({ status } = {}) {
-    return this.repository.listarTodos(status ? { status } : {});
+    return this.entregasRepository.listarTodos(status ? { status } : {});
   }
 
   buscarPorId(id) {
-    const entrega = this.repository.buscarPorId(Number(id));
+    const entrega = this.entregasRepository.buscarPorId(Number(id));
     if (!entrega) throw new AppError(404, 'Entrega não encontrada');
     return entrega;
   }
@@ -74,8 +78,30 @@ export class EntregasService {
     return this.#mudarStatus(entrega, 'CANCELADA');
   }
 
+  atribuir(id, { motoristaId } = {}) {
+    const entrega = this.buscarPorId(id);
+    if (motoristaId == null || !Number.isInteger(Number(motoristaId))) {
+      throw new AppError(400, 'Campo obrigatório ausente ou inválido: motoristaId');
+    }
+    const motorista = this.motoristasRepository.buscarPorId(Number(motoristaId));
+    if (!motorista) throw new AppError(404, 'Motorista não encontrado');
+    if (entrega.status !== 'CRIADA') {
+      throw new AppError(
+        422,
+        `Só é possível atribuir motorista a entrega CRIADA (status atual: ${entrega.status})`,
+      );
+    }
+    if (motorista.status !== 'ATIVO') {
+      throw new AppError(422, 'Motorista inativo não pode ser atribuído a uma entrega');
+    }
+    return this.entregasRepository.atualizar(entrega.id, {
+      motoristaId: motorista.id,
+      historico: [...entrega.historico, this.#evento(`Motorista ${motorista.nome} atribuído`)],
+    });
+  }
+
   #mudarStatus(entrega, status) {
-    return this.repository.atualizar(entrega.id, {
+    return this.entregasRepository.atualizar(entrega.id, {
       status,
       historico: [
         ...entrega.historico,

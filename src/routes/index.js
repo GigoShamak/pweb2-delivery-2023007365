@@ -12,7 +12,7 @@ export function criarRotas() {
   const database = new Database();
   const entregasRepo = new EntregasRepository(database);
   const motoristasRepo = new MotoristasRepository(database);
-  const entregasService = new EntregasService(entregasRepo);
+  const entregasService = new EntregasService(entregasRepo, motoristasRepo);
   const motoristasService = new MotoristasService(motoristasRepo, entregasRepo);
   const entregasController = new EntregasController(entregasService);
   const motoristasController = new MotoristasController(motoristasService);
@@ -25,6 +25,7 @@ export function criarRotas() {
   router.get('/entregas/:id/historico', entregasController.historico);
   router.patch('/entregas/:id/avancar', entregasController.avancar);
   router.patch('/entregas/:id/cancelar', entregasController.cancelar);
+  router.patch('/entregas/:id/atribuir', entregasController.atribuir);
 
   router.post('/motoristas', motoristasController.criar);
   router.get('/motoristas', motoristasController.listar);
