@@ -10,12 +10,8 @@ export class EntregasRepository {
     return structuredClone(entrega);
   }
 
-  listar() {
-    return structuredClone(this.database.entregas);
-  }
-
-  buscarPor(criterios) {
-    const campos = Object.entries(criterios);
+  listarTodos(filtros = {}) {
+    const campos = Object.entries(filtros).filter(([, valor]) => valor !== undefined);
     return structuredClone(
       this.database.entregas.filter((e) => campos.every(([campo, valor]) => e[campo] === valor)),
     );

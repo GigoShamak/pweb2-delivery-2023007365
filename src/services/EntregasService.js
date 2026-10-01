@@ -19,8 +19,14 @@ export class EntregasService {
     }
     const dados = { descricao: descricao.trim(), origem: origem.trim(), destino: destino.trim() };
     const duplicadaAtiva = this.repository
-      .buscarPor(dados)
-      .some((e) => !STATUS_FINAIS.includes(e.status));
+      .listarTodos()
+      .some(
+        (e) =>
+          e.descricao === dados.descricao &&
+          e.origem === dados.origem &&
+          e.destino === dados.destino &&
+          !STATUS_FINAIS.includes(e.status),
+      );
     if (duplicadaAtiva) {
       throw new AppError(409, 'Já existe uma entrega ativa com mesma descrição, origem e destino');
     }
@@ -37,8 +43,7 @@ export class EntregasService {
   }
 
   listar({ status } = {}) {
-    if (status) return this.repository.buscarPor({ status });
-    return this.repository.listar();
+    return this.repository.listarTodos(status ? { status } : {});
   }
 
   buscarPorId(id) {
