@@ -2,7 +2,8 @@
 export class Database {
   constructor() {
     this.entregas = [];
-    this._sequencias = { entregas: 0 };
+    this.motoristas = [];
+    this._sequencias = { entregas: 0, motoristas: 0 };
   }
 
   proximoId(tabela) {
