@@ -28,19 +28,55 @@ server.js                  # só configura o app, monta /api e o tratamento de e
 src/
 ├── controllers/           # traduz HTTP ↔ service (sem regra de negócio)
 ├── services/              # TODA a regra de negócio (validações, duplicidade, transições)
-├── repositories/          # só acesso a dados
+├── repositories/          # só acesso a dados + contratos (IEntregasRepository, IMotoristasRepository)
 ├── database/              # persistência SIMULADA em memória
 ├── routes/                # composition root (injeção de dependências) + rotas
 └── utils/                 # AppError e error handler ({ "erro": "..." })
 ```
 
-A composição das dependências acontece em um único ponto, [src/routes/index.js](src/routes/index.js):
+## Contratos de repository e composição das dependências
+
+Cada repository tem um **contrato documentado em JSDoc**
+([IEntregasRepository.js](src/repositories/IEntregasRepository.js) e
+[IMotoristasRepository.js](src/repositories/IMotoristasRepository.js)). Os services usam **somente**
+os métodos do contrato, então a implementação em memória pode ser trocada por outra (um Mock, um
+banco real) sem alterar nenhum service.
+
+```
+IEntregasRepository                      IMotoristasRepository
+  listarTodos(filtros?) → Entrega[]        listarTodos()     → Motorista[]
+  buscarPorId(id)       → Entrega | null   buscarPorId(id)   → Motorista | null
+  criar(dados)          → Entrega          buscarPorCpf(cpf) → Motorista | null
+  atualizar(id, dados)  → Entrega          criar(dados)      → Motorista
+```
+
+A composição acontece em um único ponto, [src/routes/index.js](src/routes/index.js) — não há `new`
+de repository dentro de service ou controller:
 
 ```js
 const database = new Database();
-const repository = new EntregasRepository(database);
-const service = new EntregasService(repository);
-const controller = new EntregasController(service);
+const entregasRepo = new EntregasRepository(database);
+const motoristasRepo = new MotoristasRepository(database);
+const entregasService = new EntregasService(entregasRepo, motoristasRepo);
+const motoristasService = new MotoristasService(motoristasRepo, entregasRepo);
+const entregasController = new EntregasController(entregasService);
+const motoristasController = new MotoristasController(motoristasService);
+```
+
+Diagrama da composição (`──▶` = "depende de"):
+
+```
+src/routes/index.js  (composition root: cria e injeta tudo)
+│
+├─ EntregasController ───▶ EntregasService ───┬──▶ IEntregasRepository
+│                                             └──▶ IMotoristasRepository
+│
+├─ MotoristasController ─▶ MotoristasService ─┬──▶ IMotoristasRepository
+│                                             └──▶ IEntregasRepository
+│
+├─ EntregasRepository    (implementa IEntregasRepository)   ──▶ Database
+└─ MotoristasRepository  (implementa IMotoristasRepository) ──▶ Database
+                                                     (arrays em memória)
 ```
 
 ## Entrega
@@ -52,8 +88,18 @@ const controller = new EntregasController(service);
 | `origem`      | string          | obrigatório; diferente de `destino`               |
 | `destino`     | string          | obrigatório                                       |
 | `status`      | enum            | `CRIADA → EM_TRANSITO → ENTREGUE` ou `CANCELADA`  |
-| `motoristaId` | number \| null  | `null` ao criar                                   |
+| `motoristaId` | number \| null  | `null` ao criar; preenchido na atribuição         |
 | `historico`   | Evento[]        | `{ data: ISO string, descricao: string }`         |
+
+## Motorista
+
+| Campo          | Tipo            | Observação                    |
+| -------------- | --------------- | ----------------------------- |
+| `id`           | number          | gerado                        |
+| `nome`         | string          | obrigatório                   |
+| `cpf`          | string          | obrigatório; único            |
+| `placaVeiculo` | string \| null  | opcional                      |
+| `status`       | enum            | `ATIVO` (padrão) ou `INATIVO` |
 
 ## Rotas
 
@@ -67,6 +113,12 @@ const controller = new EntregasController(service);
 | PATCH  | `/api/entregas/:id/avancar`      | 200     | 404 · 422 transição inválida  |
 | PATCH  | `/api/entregas/:id/cancelar`     | 200     | 404 · 422 já finalizada       |
 | GET    | `/api/entregas/:id/historico`    | 200     | 404                           |
+| PATCH  | `/api/entregas/:id/atribuir`     | 200     | 400 · 404 · 422 entrega não CRIADA ou motorista INATIVO |
+| POST   | `/api/motoristas`                | 201     | 400 inválido · 409 CPF duplicado |
+| GET    | `/api/motoristas`                | 200     | —                             |
+| GET    | `/api/motoristas/:id`            | 200     | 404                           |
+| GET    | `/api/motoristas/:id/entregas`   | 200     | 404                           |
+| GET    | `/api/motoristas/:id/entregas?status=CRIADA` | 200 | 404                    |
 
 Erros sempre no formato `{ "erro": "mensagem" }`.
 
@@ -77,6 +129,12 @@ Erros sempre no formato `{ "erro": "mensagem" }`.
   `descricao` + `origem` + `destino` → `409`.
 - **Transições:** apenas `CRIADA → EM_TRANSITO → ENTREGUE`; qualquer outro avanço → `422`.
 - **Cancelamento:** só se o status não for `ENTREGUE` nem `CANCELADA` (senão `422`).
+- **Motorista:** `nome` e `cpf` obrigatórios (senão `400`); CPF já cadastrado → `409`; status
+  inicial `ATIVO`.
+- **Atribuição:** só para entrega `CRIADA` e motorista `ATIVO` (senão `422`); registra evento no
+  histórico. A regra fica no `EntregasService`.
+- **Entregas do motorista:** retorna apenas as entregas atribuídas a ele; `?status=` combina com
+  esse filtro.
 
 ## Exemplos (curl)
 
@@ -104,6 +162,24 @@ curl -X PATCH http://localhost:3000/api/entregas/1/cancelar
 
 # histórico
 curl http://localhost:3000/api/entregas/1/historico
+
+# cadastrar motorista (placaVeiculo é opcional)
+curl -X POST http://localhost:3000/api/motoristas \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"João Silva","cpf":"123.456.789-00","placaVeiculo":"ABC1D23"}'
+
+# listar motoristas / buscar por id
+curl http://localhost:3000/api/motoristas
+curl http://localhost:3000/api/motoristas/1
+
+# atribuir motorista a uma entrega CRIADA
+curl -X PATCH http://localhost:3000/api/entregas/1/atribuir \
+  -H "Content-Type: application/json" \
+  -d '{"motoristaId":1}'
+
+# entregas de um motorista / combinando com status
+curl http://localhost:3000/api/motoristas/1/entregas
+curl "http://localhost:3000/api/motoristas/1/entregas?status=CRIADA"
 ```
 
 Exemplo de resposta ao criar (`201`):
