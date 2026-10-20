@@ -8,7 +8,8 @@
     "dev": "node --watch server.js",
     "check": "node autograder/check.mjs",
     "db:migrate": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
