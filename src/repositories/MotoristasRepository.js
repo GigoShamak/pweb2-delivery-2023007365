@@ -5,22 +5,22 @@ export class MotoristasRepository {
     this.database = database;
   }
 
-  criar(dados) {
+  async criar(dados) {
     const motorista = { id: this.database.proximoId('motoristas'), ...dados };
     this.database.motoristas.push(motorista);
     return structuredClone(motorista);
   }
 
-  listarTodos() {
+  async listarTodos() {
     return structuredClone(this.database.motoristas);
   }
 
-  buscarPorId(id) {
+  async buscarPorId(id) {
     const motorista = this.database.motoristas.find((m) => m.id === id);
     return motorista ? structuredClone(motorista) : null;
   }
 
-  buscarPorCpf(cpf) {
+  async buscarPorCpf(cpf) {
     const motorista = this.database.motoristas.find((m) => m.cpf === cpf);
     return motorista ? structuredClone(motorista) : null;
   }

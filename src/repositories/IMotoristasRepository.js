@@ -1,5 +1,5 @@
-// Contrato do repository de motoristas. Os services dependem só deste contrato,
-// nunca da implementação concreta (MotoristasRepository).
+// Contrato do repository de motoristas. Assíncrono: todo método retorna uma Promise.
+// Os services dependem só deste contrato, nunca de uma implementação concreta.
 
 /**
  * @typedef {Object} Motorista
@@ -12,13 +12,13 @@
 
 /**
  * @typedef {Object} IMotoristasRepository
- * @property {() => Motorista[]} listarTodos
+ * @property {() => Promise<Motorista[]>} listarTodos
  *   Lista todos os motoristas.
- * @property {(id: number) => Motorista | null} buscarPorId
+ * @property {(id: number) => Promise<Motorista | null>} buscarPorId
  *   Busca um motorista pelo id; null se não existir.
- * @property {(cpf: string) => Motorista | null} buscarPorCpf
+ * @property {(cpf: string) => Promise<Motorista | null>} buscarPorCpf
  *   Busca um motorista pelo CPF; null se não existir.
- * @property {(dados: Omit<Motorista, 'id'>) => Motorista} criar
+ * @property {(dados: Omit<Motorista, 'id'>) => Promise<Motorista>} criar
  *   Persiste um novo motorista e o devolve com o id gerado.
  */
 

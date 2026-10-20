@@ -10,7 +10,7 @@ export class MotoristasService {
     this.entregasRepository = entregasRepository;
   }
 
-  criar({ nome, cpf, placaVeiculo } = {}) {
+  async criar({ nome, cpf, placaVeiculo } = {}) {
     for (const [campo, valor] of Object.entries({ nome, cpf })) {
       if (typeof valor !== 'string' || valor.trim() === '') {
         throw new AppError(400, `Campo obrigatório ausente ou inválido: ${campo}`);
@@ -19,7 +19,7 @@ export class MotoristasService {
     if (placaVeiculo != null && typeof placaVeiculo !== 'string') {
       throw new AppError(400, 'Campo inválido: placaVeiculo');
     }
-    if (this.motoristasRepository.buscarPorCpf(cpf.trim())) {
+    if (await this.motoristasRepository.buscarPorCpf(cpf.trim())) {
       throw new AppError(409, `Já existe um motorista cadastrado com o CPF ${cpf.trim()}`);
     }
     return this.motoristasRepository.criar({
@@ -30,18 +30,18 @@ export class MotoristasService {
     });
   }
 
-  listar() {
+  async listar() {
     return this.motoristasRepository.listarTodos();
   }
 
-  buscarPorId(id) {
-    const motorista = this.motoristasRepository.buscarPorId(Number(id));
+  async buscarPorId(id) {
+    const motorista = await this.motoristasRepository.buscarPorId(Number(id));
     if (!motorista) throw new AppError(404, 'Motorista não encontrado');
     return motorista;
   }
 
-  listarEntregas(id, { status } = {}) {
-    const motorista = this.buscarPorId(id);
+  async listarEntregas(id, { status } = {}) {
+    const motorista = await this.buscarPorId(id);
     const filtros = { motoristaId: motorista.id };
     if (status) filtros.status = status;
     return this.entregasRepository.listarTodos(filtros);

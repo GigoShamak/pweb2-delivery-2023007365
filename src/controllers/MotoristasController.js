@@ -4,19 +4,19 @@ export class MotoristasController {
     this.service = service;
   }
 
-  criar = (req, res) => {
-    res.status(201).json(this.service.criar(req.body));
+  criar = async (req, res) => {
+    res.status(201).json(await this.service.criar(req.body));
   };
 
-  listar = (req, res) => {
-    res.status(200).json(this.service.listar());
+  listar = async (req, res) => {
+    res.status(200).json(await this.service.listar());
   };
 
-  buscarPorId = (req, res) => {
-    res.status(200).json(this.service.buscarPorId(req.params.id));
+  buscarPorId = async (req, res) => {
+    res.status(200).json(await this.service.buscarPorId(req.params.id));
   };
 
-  listarEntregas = (req, res) => {
-    res.status(200).json(this.service.listarEntregas(req.params.id, req.query));
+  listarEntregas = async (req, res) => {
+    res.status(200).json(await this.service.listarEntregas(req.params.id, req.query));
   };
 }
