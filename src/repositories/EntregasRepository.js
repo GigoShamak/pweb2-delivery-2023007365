@@ -5,25 +5,25 @@ export class EntregasRepository {
     this.database = database;
   }
 
-  criar(dados) {
+  async criar(dados) {
     const entrega = { id: this.database.proximoId('entregas'), ...dados };
     this.database.entregas.push(entrega);
     return structuredClone(entrega);
   }
 
-  listarTodos(filtros = {}) {
+  async listarTodos(filtros = {}) {
     const campos = Object.entries(filtros).filter(([, valor]) => valor !== undefined);
     return structuredClone(
       this.database.entregas.filter((e) => campos.every(([campo, valor]) => e[campo] === valor)),
     );
   }
 
-  buscarPorId(id) {
+  async buscarPorId(id) {
     const entrega = this.database.entregas.find((e) => e.id === id);
     return entrega ? structuredClone(entrega) : null;
   }
 
-  atualizar(id, dados) {
+  async atualizar(id, dados) {
     const indice = this.database.entregas.findIndex((e) => e.id === id);
     if (indice === -1) return null;
     this.database.entregas[indice] = { ...this.database.entregas[indice], ...dados, id };

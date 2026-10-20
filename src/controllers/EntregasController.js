@@ -4,31 +4,31 @@ export class EntregasController {
     this.service = service;
   }
 
-  criar = (req, res) => {
-    res.status(201).json(this.service.criar(req.body));
+  criar = async (req, res) => {
+    res.status(201).json(await this.service.criar(req.body));
   };
 
-  listar = (req, res) => {
-    res.status(200).json(this.service.listar(req.query));
+  listar = async (req, res) => {
+    res.status(200).json(await this.service.listar(req.query));
   };
 
-  buscarPorId = (req, res) => {
-    res.status(200).json(this.service.buscarPorId(req.params.id));
+  buscarPorId = async (req, res) => {
+    res.status(200).json(await this.service.buscarPorId(req.params.id));
   };
 
-  historico = (req, res) => {
-    res.status(200).json(this.service.historico(req.params.id));
+  historico = async (req, res) => {
+    res.status(200).json(await this.service.historico(req.params.id));
   };
 
-  avancar = (req, res) => {
-    res.status(200).json(this.service.avancar(req.params.id));
+  avancar = async (req, res) => {
+    res.status(200).json(await this.service.avancar(req.params.id));
   };
 
-  cancelar = (req, res) => {
-    res.status(200).json(this.service.cancelar(req.params.id));
+  cancelar = async (req, res) => {
+    res.status(200).json(await this.service.cancelar(req.params.id));
   };
 
-  atribuir = (req, res) => {
-    res.status(200).json(this.service.atribuir(req.params.id, req.body));
+  atribuir = async (req, res) => {
+    res.status(200).json(await this.service.atribuir(req.params.id, req.body));
   };
 }

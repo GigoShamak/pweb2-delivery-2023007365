@@ -11,6 +11,8 @@ permissions:
 jobs:
   autograding:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./dev.db
     steps:
       - uses: actions/checkout@v4
 
@@ -19,7 +21,10 @@ jobs:
           node-version: '20'
 
       - name: Instalar dependências
-        run: npm install --no-audit --no-fund
+        run: npm install --no-audit --no-fund # o postinstall roda o prisma generate
+
+      - name: Aplicar migrations do banco
+        run: npx prisma migrate deploy
 
       - name: Subir o servidor
         run: |

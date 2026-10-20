@@ -4,16 +4,29 @@
 
 API para rastrear o ciclo de vida de encomendas, construída com **Node.js + Express** em
 **arquitetura em camadas** (rotas → controllers → services → repositories), com persistência
-simulada em memória.
+real em **SQLite via Prisma ORM** — os dados sobrevivem ao reinício do servidor.
 
 ## Como executar
 
-Requer Node.js 18+.
+Requer Node.js 18.18+.
 
 ```bash
-npm install
-npm start          # sobe em http://localhost:3000 (ou na porta de process.env.PORT)
+npm install                  # instala e gera o Prisma Client (postinstall: prisma generate)
+cp .env.example .env         # DATABASE_URL="file:./dev.db"
+npx prisma migrate dev       # cria o banco (prisma/dev.db) e aplica as migrations
+npm start                    # sobe em http://localhost:3000 (ou na porta de process.env.PORT)
 ```
+
+Outros comandos do banco:
+
+```bash
+npx prisma migrate deploy    # aplica migrations pendentes sem criar novas (= npm run db:migrate)
+npx prisma studio            # interface web para inspecionar os dados (= npm run db:studio)
+npx prisma migrate dev --name <nome>   # após alterar prisma/schema.prisma, gera uma nova migration
+```
+
+O arquivo do banco (`prisma/dev.db`) e o `.env` ficam fora do git; o schema e as migrations
+(`prisma/migrations/`) são versionados.
 
 Autograder (com o servidor no ar, em outro terminal):
 
@@ -25,11 +38,15 @@ npm run check      # = BASE_URL=http://localhost:3000 node autograder/check.mjs
 
 ```
 server.js                  # só configura o app, monta /api e o tratamento de erros
+prisma/
+├── schema.prisma          # modelos Entrega, Motorista e Evento (histórico) — SQLite
+└── migrations/            # migrations versionadas
 src/
+├── config/                # singleton do Prisma Client (database.js)
 ├── controllers/           # traduz HTTP ↔ service (sem regra de negócio)
 ├── services/              # TODA a regra de negócio (validações, duplicidade, transições)
-├── repositories/          # só acesso a dados + contratos (IEntregasRepository, IMotoristasRepository)
-├── database/              # persistência SIMULADA em memória
+├── repositories/          # só acesso a dados: contratos + implementações Prisma (*.prisma.js) e em memória
+├── database/              # banco simulado em memória (usado pelos repositories em memória)
 ├── routes/                # composition root (injeção de dependências) + rotas
 └── utils/                 # AppError e error handler ({ "erro": "..." })
 ```
@@ -39,24 +56,23 @@ src/
 Cada repository tem um **contrato documentado em JSDoc**
 ([IEntregasRepository.js](src/repositories/IEntregasRepository.js) e
 [IMotoristasRepository.js](src/repositories/IMotoristasRepository.js)). Os services usam **somente**
-os métodos do contrato, então a implementação em memória pode ser trocada por outra (um Mock, um
-banco real) sem alterar nenhum service.
+os métodos do contrato, então a implementação pode ser trocada (memória, Mock, Prisma) sem alterar
+nenhum service. Os contratos são **assíncronos**: todo método retorna uma `Promise`.
 
 ```
 IEntregasRepository                      IMotoristasRepository
-  listarTodos(filtros?) → Entrega[]        listarTodos()     → Motorista[]
-  buscarPorId(id)       → Entrega | null   buscarPorId(id)   → Motorista | null
-  criar(dados)          → Entrega          buscarPorCpf(cpf) → Motorista | null
-  atualizar(id, dados)  → Entrega          criar(dados)      → Motorista
+  listarTodos(filtros?) → Promise<Entrega[]>        listarTodos()     → Promise<Motorista[]>
+  buscarPorId(id)       → Promise<Entrega | null>   buscarPorId(id)   → Promise<Motorista | null>
+  criar(dados)          → Promise<Entrega>          buscarPorCpf(cpf) → Promise<Motorista | null>
+  atualizar(id, dados)  → Promise<Entrega>          criar(dados)      → Promise<Motorista>
 ```
 
 A composição acontece em um único ponto, [src/routes/index.js](src/routes/index.js) — não há `new`
 de repository dentro de service ou controller:
 
 ```js
-const database = new Database();
-const entregasRepo = new EntregasRepository(database);
-const motoristasRepo = new MotoristasRepository(database);
+const entregasRepo = new EntregasPrismaRepository();
+const motoristasRepo = new MotoristasPrismaRepository();
 const entregasService = new EntregasService(entregasRepo, motoristasRepo);
 const motoristasService = new MotoristasService(motoristasRepo, entregasRepo);
 const entregasController = new EntregasController(entregasService);
@@ -74,10 +90,22 @@ src/routes/index.js  (composition root: cria e injeta tudo)
 ├─ MotoristasController ─▶ MotoristasService ─┬──▶ IMotoristasRepository
 │                                             └──▶ IEntregasRepository
 │
-├─ EntregasRepository    (implementa IEntregasRepository)   ──▶ Database
-└─ MotoristasRepository  (implementa IMotoristasRepository) ──▶ Database
-                                                     (arrays em memória)
+├─ EntregasPrismaRepository    (implementa IEntregasRepository)   ──▶ prisma (src/config/database.js)
+└─ MotoristasPrismaRepository  (implementa IMotoristasRepository) ──▶ prisma ──▶ SQLite (prisma/dev.db)
 ```
+
+### Da memória para o Prisma (prova do Repository Pattern)
+
+A migração para o banco trocou **apenas a camada de persistência**: no composition root, cada
+`new XRepository(database)` virou `new XPrismaRepository()` — uma linha por repository. Services e
+controllers não mudaram. Os repositories em memória
+([EntregasRepository.js](src/repositories/EntregasRepository.js),
+[MotoristasRepository.js](src/repositories/MotoristasRepository.js)) continuam no projeto e
+respeitam o mesmo contrato, então dá para voltar a eles trocando as mesmas duas linhas.
+
+No banco, o histórico de cada entrega fica na tabela `eventos` (modelo `Evento`, relacionado a
+`Entrega`); o repository Prisma o devolve como o array `historico` de sempre. O CPF do motorista é
+`@unique` no schema.
 
 ## Entrega
 

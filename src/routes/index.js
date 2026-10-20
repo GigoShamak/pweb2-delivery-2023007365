@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { Database } from '../database/Database.js';
-import { EntregasRepository } from '../repositories/EntregasRepository.js';
-import { MotoristasRepository } from '../repositories/MotoristasRepository.js';
+import { EntregasPrismaRepository } from '../repositories/EntregasRepository.prisma.js';
+import { MotoristasPrismaRepository } from '../repositories/MotoristasRepository.prisma.js';
 import { EntregasService } from '../services/EntregasService.js';
 import { MotoristasService } from '../services/MotoristasService.js';
 import { EntregasController } from '../controllers/EntregasController.js';
@@ -9,9 +8,10 @@ import { MotoristasController } from '../controllers/MotoristasController.js';
 
 export function criarRotas() {
   // Composition root: único ponto de injeção de dependências.
-  const database = new Database();
-  const entregasRepo = new EntregasRepository(database);
-  const motoristasRepo = new MotoristasRepository(database);
+  // Persistência com Prisma (SQLite). Para voltar à memória, troque estas duas linhas por
+  // new EntregasRepository(database) / new MotoristasRepository(database), com database = new Database().
+  const entregasRepo = new EntregasPrismaRepository();
+  const motoristasRepo = new MotoristasPrismaRepository();
   const entregasService = new EntregasService(entregasRepo, motoristasRepo);
   const motoristasService = new MotoristasService(motoristasRepo, entregasRepo);
   const entregasController = new EntregasController(entregasService);

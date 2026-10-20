@@ -1,0 +1,2 @@
+# Migrations do Prisma sempre com LF (o checksum delas muda se virarem CRLF)
+prisma/migrations/**/*.sql text eol=lf

@@ -1,5 +1,5 @@
-// Contrato do repository de entregas. Os services dependem só deste contrato,
-// nunca da implementação concreta (EntregasRepository).
+// Contrato do repository de entregas. Assíncrono: todo método retorna uma Promise.
+// Os services dependem só deste contrato, nunca de uma implementação concreta.
 
 /**
  * @typedef {Object} Evento
@@ -27,13 +27,13 @@
 
 /**
  * @typedef {Object} IEntregasRepository
- * @property {(filtros?: FiltrosEntrega) => Entrega[]} listarTodos
+ * @property {(filtros?: FiltrosEntrega) => Promise<Entrega[]>} listarTodos
  *   Lista as entregas; com filtros, só as que têm todos os campos iguais.
- * @property {(id: number) => Entrega | null} buscarPorId
+ * @property {(id: number) => Promise<Entrega | null>} buscarPorId
  *   Busca uma entrega pelo id; null se não existir.
- * @property {(dados: Omit<Entrega, 'id'>) => Entrega} criar
+ * @property {(dados: Omit<Entrega, 'id'>) => Promise<Entrega>} criar
  *   Persiste uma nova entrega e a devolve com o id gerado.
- * @property {(id: number, dados: Partial<Omit<Entrega, 'id'>>) => Entrega} atualizar
+ * @property {(id: number, dados: Partial<Omit<Entrega, 'id'>>) => Promise<Entrega>} atualizar
  *   Altera os campos informados da entrega e devolve a entrega atualizada.
  */
 
