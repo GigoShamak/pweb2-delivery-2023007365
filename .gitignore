@@ -3,3 +3,4 @@ npm-debug.log*
 .env
 *.db
 .DS_Store
+*.db-journal

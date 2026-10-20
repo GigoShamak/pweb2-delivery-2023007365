@@ -1,14 +1,20 @@
 {
   "name": "pweb2-delivery-cap04",
   "version": "1.0.0",
-  "description": "Delivery Tracker — Exercício do Cap. 4 (arquitetura em camadas + Repository/DI).",
+  "description": "Delivery Tracker — API em camadas com Repository/DI e persistência com Prisma (SQLite).",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node autograder/check.mjs"
+    "check": "node autograder/check.mjs",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "6.19.3",
     "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "prisma": "6.19.3"
   }
 }
